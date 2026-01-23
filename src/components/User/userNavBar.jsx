@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Home, User, HelpCircle, Sun, Moon, LogOut, Menu, X } from "lucide-react";
 
 const UserNavBar = () => {
   const navigate = useNavigate();
@@ -10,7 +11,32 @@ const UserNavBar = () => {
   );
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  /* 🔹 Sync theme */
+  /* 🔹 Sync theme with proper detection */
+  useEffect(() => {
+    const updateTheme = () => {
+      const storedTheme = localStorage.getItem("admin-theme") || "light";
+      setTheme(storedTheme);
+    };
+
+    updateTheme();
+    window.addEventListener("storage", updateTheme);
+
+    const observer = new MutationObserver(() => updateTheme());
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    const interval = setInterval(updateTheme, 500);
+
+    return () => {
+      window.removeEventListener("storage", updateTheme);
+      observer.disconnect();
+      clearInterval(interval);
+    };
+  }, []);
+
+  /* 🔹 Apply theme to document */
   useEffect(() => {
     if (theme === "dark") {
       document.documentElement.classList.add("dark");
@@ -26,173 +52,268 @@ const UserNavBar = () => {
     navigate("/");
   };
 
+  const isDark = theme === "dark";
+
   /* 🔹 Active link logic (supports nested routes) */
   const isActive = (path) => {
     const active = location.pathname.startsWith(path);
 
     if (!active) {
-      return theme === "dark"
-        ? "hover:bg-zinc-800/70"
-        : "hover:bg-emerald-100/70";
+      return isDark
+        ? "text-slate-300 hover:bg-slate-800/50 hover:text-slate-50 transition-all duration-300"
+        : "text-slate-700 hover:bg-emerald-100/60 hover:text-slate-900 transition-all duration-300";
     }
 
-    return theme === "dark"
-      ? "bg-gradient-to-r from-red-700 via-rose-600 to-fuchsia-700 text-white shadow-[0_0_20px_rgba(239,68,68,0.6)]"
-      : "bg-gradient-to-r from-emerald-600 via-teal-500 to-sky-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)]";
+    return isDark
+      ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg shadow-red-500/40"
+      : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-400/30";
   };
 
+  const navItems = [
+    { path: "/userdashboard", label: "Dashboard", icon: Home },
+    { path: "/userprofile", label: "Profile", icon: User },
+    { path: "/userhelp", label: "Help", icon: HelpCircle },
+  ];
+
   return (
-    <nav
-      className={`
-        sticky top-0 z-50 px-5 py-4 backdrop-blur-xl transition-all duration-500
-        ${
-          theme === "dark"
-            ? "bg-gradient-to-r from-zinc-950 via-black to-zinc-900 text-gray-100 border-b border-red-900/60"
-            : "bg-gradient-to-r from-[#faf8f4] via-emerald-50 to-sky-50 text-gray-900 border-b border-emerald-300"
-        }
-      `}
-    >
-      <div className="flex items-center justify-between">
-        {/* Logo */}
-        <div
-          onClick={() => navigate("/userdashboard")}
-          className={`text-xl font-extrabold tracking-widest cursor-pointer transition-all hover:scale-110 ${
-            theme === "dark" ? "text-red-400" : "text-emerald-700"
-          }`}
-        >
-          👤 USER
-        </div>
-
-        {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-3">
-          <button
-            onClick={() => navigate("/userdashboard")}
-            className={`px-4 py-2 rounded-xl ${isActive("/userdashboard")}`}
-          >
-            🏠 Dashboard
-          </button>
-
-          <button
-            onClick={() => navigate("/userprofile")}
-            className={`px-4 py-2 rounded-xl ${isActive("/userprofile")}`}
-          >
-            👤 Profile
-          </button>
-
-          <button
-            onClick={() => navigate("/userhelp")}
-            className={`px-4 py-2 rounded-xl ${isActive("/userhelp")}`}
-          >
-            ❓ Help
-          </button>
-
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className={`px-4 py-2 rounded-xl font-semibold ${
-              theme === "dark"
-                ? "bg-gradient-to-r from-red-800 to-fuchsia-700 text-white"
-                : "bg-gradient-to-r from-emerald-600 to-sky-500 text-white"
-            }`}
-          >
-            {theme === "dark" ? "🌞 Light" : "🌙 Dark"}
-          </button>
-
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-500 text-white hover:scale-110 transition"
-          >
-            🚪 Logout
-          </button>
-        </div>
-
-        {/* Hamburger */}
-        <button
-          className="md:hidden w-10 h-10 relative"
-          onClick={() => setMobileOpen(!mobileOpen)}
-        >
-          <span
-            className={`absolute w-6 h-0.5 transition ${
-              mobileOpen ? "rotate-45 bg-red-500" : "-translate-y-2 bg-current"
-            }`}
-          />
-          <span
-            className={`absolute w-6 h-0.5 transition ${
-              mobileOpen ? "opacity-0" : "bg-current"
-            }`}
-          />
-          <span
-            className={`absolute w-6 h-0.5 transition ${
-              mobileOpen ? "-rotate-45 bg-red-500" : "translate-y-2 bg-current"
-            }`}
-          />
-        </button>
-      </div>
-
-      {/* Mobile Menu */}
-      <div
-        className={`md:hidden transition-all duration-500 overflow-hidden ${
-          mobileOpen ? "max-h-[500px] mt-4 opacity-100" : "max-h-0 opacity-0"
-        }`}
+    <>
+      <nav
+        className={`
+          sticky top-0 z-50 transition-all duration-500 backdrop-blur-xl border-b-2
+          ${isDark
+            ? "bg-gradient-to-r from-slate-950 via-blue-950 to-slate-950 border-red-900/40 shadow-2xl shadow-slate-950/50"
+            : "bg-gradient-to-r from-slate-50 via-cyan-50 to-slate-100 border-emerald-300/40 shadow-lg shadow-slate-200/50"
+          }
+        `}
       >
-        <div
-          className={`p-4 rounded-2xl flex flex-col gap-3 ${
-            theme === "dark"
-              ? "bg-gradient-to-b from-zinc-900 to-black"
-              : "bg-gradient-to-b from-emerald-50 to-sky-50"
-          }`}
-        >
-          <button
-            onClick={() => {
-              navigate("/userdashboard");
-              setMobileOpen(false);
-            }}
-            className={`px-4 py-3 rounded-xl text-left ${isActive(
-              "/userdashboard"
-            )}`}
-          >
-            🏠 Dashboard
-          </button>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16 sm:h-20">
+            
+            {/* Logo Section */}
+            <div
+              onClick={() => navigate("/userdashboard")}
+              className={`
+                flex items-center gap-3 cursor-pointer group
+                transform transition-all duration-300 hover:scale-105
+              `}
+            >
+              <div
+                className={`
+                  w-10 h-10 sm:w-12 sm:h-12 rounded-xl
+                  flex items-center justify-center font-bold text-lg
+                  transition-all duration-500 transform group-hover:scale-110
+                  ${isDark
+                    ? "bg-gradient-to-br from-red-600 to-rose-600 text-white shadow-lg shadow-red-500/50"
+                    : "bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-400/40"
+                  }
+                `}
+              >
+                👤
+              </div>
+              <div className="hidden sm:block">
+                <h1
+                  className={`
+                    text-lg sm:text-xl font-bold tracking-tight
+                    transition-colors duration-300
+                    ${isDark ? "text-slate-50" : "text-slate-900"}
+                  `}
+                >
+                  User
+                </h1>
+                <p
+                  className={`
+                    text-xs font-medium tracking-widest uppercase
+                    transition-colors duration-300
+                    ${isDark ? "text-slate-400" : "text-slate-500"}
+                  `}
+                >
+                  Portal
+                </p>
+              </div>
+            </div>
 
-          <button
-            onClick={() => {
-              navigate("/userprofile");
-              setMobileOpen(false);
-            }}
-            className={`px-4 py-3 rounded-xl text-left ${isActive(
-              "/userprofile"
-            )}`}
-          >
-            👤 Profile
-          </button>
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-2 lg:gap-3">
+              {navItems.map(({ path, label, icon: Icon }) => (
+                <button
+                  key={path}
+                  onClick={() => navigate(path)}
+                  className={`
+                    group relative px-4 lg:px-5 py-2.5 rounded-lg
+                    flex items-center gap-2.5 font-medium text-sm
+                    transition-all duration-300 ease-out
+                    ${isActive(path)}
+                  `}
+                >
+                  <Icon size={18} className="transition-transform duration-300 group-hover:scale-110" />
+                  <span>{label}</span>
+                  {location.pathname.startsWith(path) && (
+                    <div
+                      className={`
+                        absolute bottom-0 left-0 right-0 h-1 rounded-full
+                        transform origin-left animate-pulse
+                        ${isDark
+                          ? "bg-gradient-to-r from-red-400 to-rose-400"
+                          : "bg-gradient-to-r from-emerald-300 to-teal-300"
+                        }
+                      `}
+                    />
+                  )}
+                </button>
+              ))}
 
-          <button
-            onClick={() => {
-              navigate("/userhelp");
-              setMobileOpen(false);
-            }}
-            className={`px-4 py-3 rounded-xl text-left ${isActive(
-              "/userhelp"
-            )}`}
-          >
-            ❓ Help
-          </button>
+              <div className="w-px h-8 bg-gradient-to-b from-transparent via-slate-300 to-transparent dark:via-slate-700 mx-2 lg:mx-3" />
 
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-sky-500 text-white"
-          >
-            {theme === "dark" ? "🌞 Light Mode" : "🌙 Dark Mode"}
-          </button>
+              {/* Theme Toggle */}
+              <button
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className={`
+                  relative group px-4 lg:px-5 py-2.5 rounded-lg
+                  flex items-center gap-2.5 font-semibold text-sm
+                  transition-all duration-500 ease-out
+                  transform hover:scale-105 active:scale-95
+                  ${isDark
+                    ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg shadow-red-500/40 hover:shadow-red-500/60"
+                    : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-400/30 hover:shadow-emerald-400/50"
+                  }
+                `}
+              >
+                {isDark ? (
+                  <>
+                    <Sun size={18} className="transition-transform duration-300 group-hover:rotate-180" />
+                    <span className="hidden lg:inline">Light</span>
+                  </>
+                ) : (
+                  <>
+                    <Moon size={18} className="transition-transform duration-300 group-hover:rotate-180" />
+                    <span className="hidden lg:inline">Dark</span>
+                  </>
+                )}
+              </button>
 
-          <button
-            onClick={handleLogout}
-            className="px-4 py-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-500 text-white"
+              {/* Logout */}
+              <button
+                onClick={handleLogout}
+                className={`
+                  group relative px-4 lg:px-5 py-2.5 rounded-lg
+                  flex items-center gap-2.5 font-semibold text-sm
+                  transition-all duration-300 ease-out
+                  transform hover:scale-105 active:scale-95
+                  bg-gradient-to-r from-red-600 to-rose-600 text-white
+                  shadow-lg shadow-red-500/40 hover:shadow-red-500/60
+                `}
+              >
+                <LogOut size={18} />
+                <span className="hidden lg:inline">Logout</span>
+              </button>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              className={`
+                md:hidden p-2.5 rounded-lg transition-all duration-300
+                ${isDark
+                  ? "hover:bg-slate-800 text-slate-300 hover:text-slate-50"
+                  : "hover:bg-slate-100 text-slate-700 hover:text-slate-900"
+                }
+              `}
+              onClick={() => setMobileOpen(!mobileOpen)}
+            >
+              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+
+          {/* Mobile Navigation */}
+          <div
+            className={`
+              md:hidden overflow-hidden transition-all duration-500 ease-out
+              border-t border-slate-200 dark:border-slate-800
+              ${mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}
+            `}
           >
-            🚪 Logout
-          </button>
+            <div
+              className={`
+                px-4 py-4 sm:px-6 sm:py-6 space-y-3
+                ${isDark ? "bg-slate-900/50" : "bg-slate-50/50"}
+              `}
+            >
+              {navItems.map(({ path, label, icon: Icon }) => (
+                <button
+                  key={path}
+                  onClick={() => {
+                    navigate(path);
+                    setMobileOpen(false);
+                  }}
+                  className={`
+                    w-full flex items-center gap-3 px-4 py-3.5 rounded-lg
+                    font-medium text-sm transition-all duration-300
+                    transform hover:scale-102 active:scale-95
+                    ${isActive(path)}
+                  `}
+                >
+                  <Icon size={20} />
+                  <span>{label}</span>
+                </button>
+              ))}
+
+              <div className="pt-2 my-3 border-t border-slate-300 dark:border-slate-700" />
+
+              <button
+                onClick={() => {
+                  setTheme(theme === "dark" ? "light" : "dark");
+                  setMobileOpen(false);
+                }}
+                className={`
+                  w-full flex items-center gap-3 px-4 py-3.5 rounded-lg
+                  font-semibold text-sm transition-all duration-300
+                  transform hover:scale-102 active:scale-95
+                  ${isDark
+                    ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg"
+                    : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg"
+                  }
+                `}
+              >
+                {isDark ? (
+                  <>
+                    <Sun size={20} />
+                    <span>Light Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <Moon size={20} />
+                    <span>Dark Mode</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setMobileOpen(false);
+                }}
+                className={`
+                  w-full flex items-center gap-3 px-4 py-3.5 rounded-lg
+                  font-semibold text-sm transition-all duration-300
+                  transform hover:scale-102 active:scale-95
+                  bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg
+                `}
+              >
+                <LogOut size={20} />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+
+      {/* Mobile Overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 top-20 z-40 bg-black/20 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+    </>
   );
 };
 
