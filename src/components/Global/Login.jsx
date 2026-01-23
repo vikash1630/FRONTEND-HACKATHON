@@ -35,12 +35,21 @@ const Login = () => {
                 { headers: { "Content-Type": "application/json" } }
             );
 
-            localStorage.setItem("token", res.data.token);
+            const { token, user } = res.data;
 
-            setPopup({
-                type: "success",
-                message: res.data.message || "Login successful ✅",
-            });
+            // save token
+            localStorage.setItem("token", token);
+            console.log(res.data)
+            // optional: save role
+            localStorage.setItem("isAdmin", user.isAdmin);
+
+            // role-based redirect
+            if (user.isAdmin) {
+                navigate("/dashboard");
+            } else {
+                navigate("/userHome");
+            }
+
 
             // navigate("/dashboard");
 
