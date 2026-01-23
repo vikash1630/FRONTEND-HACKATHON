@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-
-
+import { Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle, Loader } from "lucide-react";
 
 const Login = () => {
     const [role, setRole] = useState("user");
@@ -10,24 +9,24 @@ const Login = () => {
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [focusedField, setFocusedField] = useState(null);
-    const [darkMode, setDarkMode] = useState(false);
+    const [darkMode, setDarkMode] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
-    const navigate = useNavigate();
     const [popup, setPopup] = useState(null);
+    const [roleAlert, setRoleAlert] = useState(null);
+    const navigate = useNavigate();
 
     const API = import.meta.env.VITE_BACKEND_URL;
 
     React.useEffect(() => {
         if (!popup) return;
-        const t = setTimeout(() => setPopup(null), 3000);
+        const t = setTimeout(() => setPopup(null), 4000);
         return () => clearTimeout(t);
     }, [popup]);
-
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        console.log("Button Clicked")
+
         try {
             const res = await axios.post(
                 `${API}/auth/login`,
@@ -37,21 +36,50 @@ const Login = () => {
 
             const { token, user } = res.data;
 
-            // save token
-            localStorage.setItem("token", token);
-            console.log(res.data)
-            // optional: save role
-            localStorage.setItem("isAdmin", user.isAdmin);
-
-            // role-based redirect
-            if (user.isAdmin) {
-                navigate("/dashboard");
-            } else {
-                navigate("/userHome");
+            // Check role mismatch
+            if (role === "user" && user.isAdmin) {
+                setRoleAlert({
+                    type: "admin-detected",
+                    message: "This account is registered as Admin. Please use Admin Login.",
+                    action: () => {
+                        setRole("admin");
+                        setRoleAlert(null);
+                    }
+                });
+                setLoading(false);
+                return;
             }
 
+            if (role === "admin" && !user.isAdmin) {
+                setRoleAlert({
+                    type: "user-detected",
+                    message: "This account is registered as User. Please use User Login.",
+                    action: () => {
+                        setRole("user");
+                        setRoleAlert(null);
+                    }
+                });
+                setLoading(false);
+                return;
+            }
 
-            // navigate("/dashboard");
+            // Save token and role
+            localStorage.setItem("token", token);
+            localStorage.setItem("isAdmin", user.isAdmin);
+
+            setPopup({
+                type: "success",
+                message: `Welcome back! Redirecting...`,
+            });
+
+            // Redirect based on role
+            setTimeout(() => {
+                if (user.isAdmin) {
+                    navigate("/dashboard");
+                } else {
+                    navigate("/userHome");
+                }
+            }, 1500);
 
         } catch (err) {
             const errorMessage =
@@ -65,29 +93,28 @@ const Login = () => {
         } finally {
             setLoading(false);
         }
-
     };
 
-
     return (
-        <div className={`min-h-screen flex items-center justify-center p-4 relative overflow-hidden transition-all duration-700 ${darkMode
-            ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900'
-            : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+        <div className={`min-h-screen flex items-center justify-center p-3 sm:p-4 relative overflow-hidden transition-all duration-700 ${darkMode
+            ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
+            : 'bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50'
             }`}>
+
             {/* Dark Mode Toggle */}
             <button
                 onClick={() => setDarkMode(!darkMode)}
-                className={`fixed top-6 right-6 p-4 rounded-full shadow-2xl transition-all duration-500 transform hover:scale-110 hover:rotate-180 z-50 ${darkMode
-                    ? 'bg-gradient-to-br from-yellow-400 to-orange-500'
-                    : 'bg-gradient-to-br from-indigo-600 to-purple-600'
+                className={`fixed top-4 sm:top-6 right-4 sm:right-6 p-3 sm:p-4 rounded-full shadow-2xl transition-all duration-500 transform hover:scale-110 hover:rotate-180 z-50 ${darkMode
+                    ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-orange-500/50'
+                    : 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-400/50'
                     }`}
             >
                 {darkMode ? (
-                    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 sm:w-6 h-5 sm:h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
                     </svg>
                 ) : (
-                    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 sm:w-6 h-5 sm:h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
                     </svg>
                 )}
@@ -95,21 +122,33 @@ const Login = () => {
 
             {/* Animated Background Elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className={`absolute top-20 left-10 w-72 h-72 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob ${darkMode ? 'bg-purple-600' : 'bg-blue-200'
-                    }`}></div>
-                <div className={`absolute top-40 right-10 w-72 h-72 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000 ${darkMode ? 'bg-pink-600' : 'bg-purple-200'
-                    }`}></div>
-                <div className={`absolute -bottom-8 left-20 w-72 h-72 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000 ${darkMode ? 'bg-indigo-600' : 'bg-pink-200'
-                    }`}></div>
+                <div className={`absolute top-20 left-5 sm:left-10 w-48 sm:w-72 h-48 sm:h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob ${
+                    role === "admin"
+                        ? darkMode ? 'bg-red-700' : 'bg-red-300'
+                        : darkMode ? 'bg-blue-700' : 'bg-blue-300'
+                }`}></div>
+                <div className={`absolute top-40 right-5 sm:right-10 w-48 sm:w-72 h-48 sm:h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-2000 ${
+                    role === "admin"
+                        ? darkMode ? 'bg-rose-700' : 'bg-rose-300'
+                        : darkMode ? 'bg-purple-700' : 'bg-purple-300'
+                }`}></div>
+                <div className={`absolute -bottom-8 left-10 sm:left-20 w-48 sm:w-72 h-48 sm:h-72 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-4000 ${
+                    role === "admin"
+                        ? darkMode ? 'bg-pink-700' : 'bg-pink-300'
+                        : darkMode ? 'bg-indigo-700' : 'bg-indigo-300'
+                }`}></div>
             </div>
 
             {/* Floating Particles */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                {[...Array(20)].map((_, i) => (
+                {[...Array(15)].map((_, i) => (
                     <div
                         key={i}
-                        className={`absolute w-2 h-2 rounded-full animate-float ${darkMode ? 'bg-purple-400' : 'bg-blue-400'
-                            }`}
+                        className={`absolute w-1 h-1 sm:w-2 sm:h-2 rounded-full animate-float ${
+                            role === "admin"
+                                ? darkMode ? 'bg-red-500' : 'bg-red-400'
+                                : darkMode ? 'bg-blue-500' : 'bg-blue-400'
+                        }`}
                         style={{
                             left: `${Math.random() * 100}%`,
                             top: `${Math.random() * 100}%`,
@@ -122,89 +161,207 @@ const Login = () => {
 
             {/* Login Card */}
             <div className="w-full max-w-md relative transform transition-all duration-500 hover:scale-105">
-                <div className={`backdrop-blur-lg rounded-3xl shadow-2xl p-8 border transition-all duration-700 animate-slideUp ${darkMode
-                    ? 'bg-gray-800/80 border-purple-500/30 shadow-purple-900/50'
-                    : 'bg-white/80 border-white/20'
-                    }`}>
-                    {/* Header with Animated Icon */}
-                    <div className="text-center mb-8">
+                <div className={`backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8 border-2 transition-all duration-700 animate-slideUp ${
+                    role === "admin"
+                        ? darkMode
+                            ? 'bg-gradient-to-br from-slate-900 via-red-900/40 to-slate-900 border-red-600/50 shadow-red-900/60'
+                            : 'bg-gradient-to-br from-white via-red-50/40 to-white border-red-300/60 shadow-red-300/40'
+                        : darkMode
+                            ? 'bg-gradient-to-br from-slate-900 via-blue-900/40 to-slate-900 border-blue-600/50 shadow-blue-900/60'
+                            : 'bg-gradient-to-br from-white via-blue-50/40 to-white border-blue-300/60 shadow-blue-300/40'
+                }`}>
+
+                    {/* Header */}
+                    <div className="text-center mb-6 sm:mb-8">
                         <div className="relative inline-block mb-4">
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full blur-lg animate-pulse"></div>
-                            <div className="relative p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full transform transition-all duration-500 hover:rotate-[360deg] hover:scale-110">
-                                <svg className="w-8 h-8 text-white animate-bounce-slow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
+                            <div className={`absolute inset-0 rounded-full blur-xl animate-pulse ${
+                                role === "admin" 
+                                    ? 'bg-gradient-to-br from-red-500 via-red-600 to-rose-600 shadow-2xl shadow-red-500/80' 
+                                    : 'bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 shadow-2xl shadow-blue-500/80'
+                            }`}></div>
+                            <div className={`relative p-3 sm:p-4 rounded-full transform transition-all duration-500 hover:rotate-[360deg] hover:scale-125 ${
+                                role === "admin" 
+                                    ? 'bg-gradient-to-br from-red-500 via-red-600 to-rose-600' 
+                                    : 'bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600'
+                            }`}>
+                                {role === "admin" ? (
+                                    <svg className="w-7 sm:w-8 h-7 sm:h-8 text-white animate-bounce-slow" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
+                    </svg>
+                                ) : (
+                                    <svg className="w-7 sm:w-8 h-7 sm:h-8 text-white animate-bounce-slow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                )}
                             </div>
                         </div>
-                        <h2 className={`text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent animate-fadeIn ${darkMode && 'from-blue-400 to-purple-400'
-                            }`}>
-                            {role === "admin" ? "Admin Portal" : "Welcome Back"}
+                        <h2 className={`text-2xl sm:text-4xl font-bold bg-gradient-to-r ${
+                            role === "admin" 
+                                ? 'from-red-600 via-red-500 to-rose-600' 
+                                : 'from-blue-600 via-blue-500 to-indigo-600'
+                        } bg-clip-text text-transparent animate-fadeIn`}>
+                            {role === "admin" ? "🔐 Admin" : "👤 User"}
                         </h2>
-                        <p className={`mt-2 text-sm animate-fadeIn animation-delay-200 ${darkMode ? 'text-gray-300' : 'text-gray-600'
-                            }`}>
-                            Sign in to continue your journey
+                        <p className={`mt-2 text-xs sm:text-sm animate-fadeIn animation-delay-200 font-medium ${
+                            role === "admin"
+                                ? darkMode ? 'text-red-300' : 'text-red-600'
+                                : darkMode ? 'text-blue-300' : 'text-blue-600'
+                        }`}>
+                            {role === "admin" ? "Secure Administrative Access" : "Welcome Back to Your Account"}
                         </p>
                     </div>
 
-                    {/* Role Toggle with Enhanced Animation */}
-                    <div className={`relative mb-8 p-1 rounded-xl transition-colors duration-700 ${darkMode ? 'bg-gray-700/50' : 'bg-gray-100'
-                        }`}>
+                    {/* Status Badge */}
+                    <div className={`mb-6 px-4 py-3 rounded-lg text-center text-xs sm:text-sm font-bold transition-all duration-300 backdrop-blur-sm border-2 ${
+                        role === "admin"
+                            ? darkMode
+                                ? 'bg-red-900/40 border-red-600/60 text-red-200'
+                                : 'bg-red-100/80 border-red-400/60 text-red-700'
+                            : darkMode
+                                ? 'bg-blue-900/40 border-blue-600/60 text-blue-200'
+                                : 'bg-blue-100/80 border-blue-400/60 text-blue-700'
+                    }`}>
+                        {role === "admin" ? "🔒 Restricted Access Portal" : "✓ Standard User Account"}
+                    </div>
+
+                    {/* Role Toggle */}
+                    <div className={`relative mb-6 sm:mb-8 p-2 rounded-2xl transition-all duration-700 border-2 backdrop-blur-sm ${
+                        darkMode 
+                            ? 'bg-gradient-to-r from-slate-800 via-slate-750 to-slate-800 border-slate-600 shadow-inner shadow-slate-900/50' 
+                            : 'bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 border-slate-300 shadow-inner shadow-slate-300/30'
+                    }`}>
+                        {/* Animated Background Slider */}
                         <div
-                            className={`absolute top-1 h-10 w-1/2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow-lg transform transition-all duration-500 ease-out ${role === "admin" ? "translate-x-full" : "translate-x-0"
-                                }`}
+                            className={`absolute top-2 h-10 sm:h-11 rounded-xl transition-all duration-500 ease-out ${
+                                role === "admin" 
+                                    ? 'from-red-600 via-rose-500 to-red-600 translate-x-[calc(100%+8px)] bg-gradient-to-r shadow-2xl shadow-red-500/70 left-2' 
+                                    : 'from-blue-600 via-cyan-500 to-blue-600 translate-x-0 bg-gradient-to-r shadow-2xl shadow-blue-500/70 left-2'
+                            }`}
                         ></div>
-                        <div className="relative flex">
+
+                        {/* Toggle Buttons */}
+                        <div className="relative flex gap-2">
+                            {/* User Button */}
                             <button
                                 type="button"
                                 onClick={() => setRole("user")}
-                                className={`w-1/2 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 transform ${role === "user"
-                                    ? "text-white scale-105"
-                                    : darkMode ? "text-gray-300 hover:scale-105" : "text-gray-700 hover:scale-105"
-                                    }`}
+                                className={`flex-1 py-2.5 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold rounded-lg transition-all duration-300 transform flex items-center justify-center gap-1.5 relative z-10 ${
+                                    role === "user"
+                                        ? "text-white drop-shadow-lg scale-105 font-extrabold"
+                                        : darkMode 
+                                            ? "text-slate-400 hover:text-slate-200 hover:scale-105" 
+                                            : "text-slate-700 hover:text-slate-900 hover:scale-105"
+                                }`}
                             >
-                                👤 User
+                                <span className={`text-lg sm:text-xl transition-transform duration-300 ${role === "user" ? 'scale-125 animate-bounce-slow' : 'scale-100'}`}>👤</span>
+                                <span className="hidden sm:inline">User</span>
                             </button>
+
+                            {/* Admin Button */}
                             <button
                                 type="button"
                                 onClick={() => setRole("admin")}
-                                className={`w-1/2 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 transform ${role === "admin"
-                                    ? "text-white scale-105"
-                                    : darkMode ? "text-gray-300 hover:scale-105" : "text-gray-700 hover:scale-105"
-                                    }`}
+                                className={`flex-1 py-2.5 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold rounded-lg transition-all duration-300 transform flex items-center justify-center gap-1.5 relative z-10 ${
+                                    role === "admin"
+                                        ? "text-white drop-shadow-lg scale-105 font-extrabold"
+                                        : darkMode 
+                                            ? "text-slate-400 hover:text-slate-200 hover:scale-105" 
+                                            : "text-slate-700 hover:text-slate-900 hover:scale-105"
+                                }`}
                             >
-                                🔐 Admin
+                                <span className={`text-lg sm:text-xl transition-transform duration-300 ${role === "admin" ? 'scale-125 animate-bounce-slow' : 'scale-100'}`}>🔐</span>
+                                <span className="hidden sm:inline">Admin</span>
                             </button>
                         </div>
+
+                        {/* Subtle Border Accent */}
+                        <div className={`absolute inset-0 rounded-2xl pointer-events-none transition-opacity duration-500 ${
+                            role === "admin"
+                                ? 'border-l-2 border-t-2 border-red-500/40 opacity-100'
+                                : 'border-l-2 border-t-2 border-blue-500/40 opacity-100'
+                        }`}></div>
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-4 sm:space-y-6">
+                        {/* Popup Notifications */}
                         {popup && (
                             <div
-                                className={`fixed top-5 right-5 z-[9999] flex items-center gap-4 min-w-[300px]
-    px-4 py-3 rounded-xl shadow-2xl text-white transition-all duration-300
-    ${popup.type === "success"
-                                        ? "bg-gradient-to-r from-green-500 to-emerald-600"
-                                        : "bg-gradient-to-r from-red-500 to-rose-600"
+                                className={`flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm font-semibold text-white transition-all duration-300 ${popup.type === "success"
+                                    ? "bg-gradient-to-r from-emerald-500 to-green-600"
+                                    : "bg-gradient-to-r from-red-500 to-rose-600"
                                     }`}
                             >
-                                <span className="text-sm font-semibold">{popup.message}</span>
-                                <button
-                                    onClick={() => setPopup(null)}
-                                    className="text-lg font-bold hover:opacity-80"
-                                >
-                                    ✕
-                                </button>
+                                {popup.type === "success" ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+                                <span>{popup.message}</span>
+                            </div>
+                        )}
+
+                        {/* Role Alert Modal */}
+                        {roleAlert && (
+                            <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
+                                <div className={`rounded-xl sm:rounded-2xl p-6 sm:p-8 max-w-sm w-full shadow-2xl transition-all duration-300 transform scale-100 ${
+                                    darkMode
+                                        ? 'bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700'
+                                        : 'bg-gradient-to-br from-white to-slate-50 border border-slate-200'
+                                }`}>
+                                    <div className="text-center">
+                                        <div className={`mx-auto w-12 sm:w-16 h-12 sm:h-16 rounded-full flex items-center justify-center mb-4 ${
+                                            roleAlert.type === "admin-detected"
+                                                ? "bg-gradient-to-br from-red-500 to-rose-600"
+                                                : "bg-gradient-to-br from-blue-500 to-purple-600"
+                                        }`}>
+                                            <AlertCircle size={28} className="text-white" />
+                                        </div>
+
+                                        <h3 className={`text-lg sm:text-xl font-bold mb-2 transition-colors duration-300 ${darkMode ? "text-slate-50" : "text-slate-900"}`}>
+                                            {roleAlert.type === "admin-detected" ? "Admin Account Detected" : "User Account Detected"}
+                                        </h3>
+
+                                        <p className={`text-sm mb-6 transition-colors duration-300 ${darkMode ? "text-slate-400" : "text-slate-600"}`}>
+                                            {roleAlert.message}
+                                        </p>
+
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <button
+                                                onClick={() => setRoleAlert(null)}
+                                                className={`flex-1 py-2.5 sm:py-3 rounded-lg font-semibold text-sm transition-all ${
+                                                    darkMode
+                                                        ? "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                                                        : "bg-slate-200 text-slate-900 hover:bg-slate-300"
+                                                }`}
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={roleAlert.action}
+                                                className={`flex-1 py-2.5 sm:py-3 rounded-lg font-semibold text-sm text-white transition-all ${
+                                                    roleAlert.type === "admin-detected"
+                                                        ? "bg-gradient-to-r from-red-500 to-rose-600 hover:shadow-lg hover:shadow-red-500/40"
+                                                        : "bg-gradient-to-r from-blue-500 to-purple-600 hover:shadow-lg hover:shadow-blue-500/40"
+                                                }`}
+                                            >
+                                                Switch to {roleAlert.type === "admin-detected" ? "Admin" : "User"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
                         {/* Email Field */}
                         <div className="relative group">
-                            <label className={`block text-sm font-semibold mb-2 transition-colors duration-300 ${darkMode ? 'text-gray-200' : 'text-gray-700'
-                                }`}>
+                            <label className={`block text-xs sm:text-sm font-bold mb-2.5 transition-colors duration-300 ${
+                                role === "admin"
+                                    ? darkMode ? 'text-red-300' : 'text-red-600'
+                                    : darkMode ? 'text-blue-300' : 'text-blue-600'
+                            }`}>
                                 Email Address
                             </label>
                             <div className="relative">
-                                <div className={`absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl blur transition-opacity duration-300 ${focusedField === 'email' ? 'opacity-40' : 'opacity-0'
+                                <div className={`absolute inset-0 rounded-xl blur transition-opacity duration-300 ${role === "admin" 
+                                    ? 'bg-gradient-to-r from-red-500 via-red-600 to-rose-600' 
+                                    : 'bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600'
+                                } ${focusedField === 'email' ? 'opacity-60' : 'opacity-0'
                                     }`}></div>
                                 <input
                                     type="email"
@@ -213,29 +370,38 @@ const Login = () => {
                                     onChange={(e) => setEmail(e.target.value)}
                                     onFocus={() => setFocusedField('email')}
                                     onBlur={() => setFocusedField(null)}
-                                    className={`relative w-full px-4 py-3 pl-12 border-2 rounded-xl outline-none transition-all duration-300 transform hover:scale-[1.02] focus:scale-[1.02] ${darkMode
-                                        ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50'
-                                        : 'bg-white border-gray-200 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-purple-500'
-                                        }`}
+                                    className={`relative w-full px-3 sm:px-4 py-2.5 sm:py-3.5 pl-9 sm:pl-12 border-2 rounded-xl outline-none text-sm font-medium transition-all duration-300 transform hover:scale-[1.02] focus:scale-[1.02] ${
+                                        role === "admin"
+                                            ? darkMode
+                                                ? 'bg-red-950/40 border-red-600/60 text-white placeholder-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-500/40'
+                                                : 'bg-red-50/70 border-red-300/80 text-red-950 placeholder-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-400/50'
+                                            : darkMode
+                                                ? 'bg-blue-950/40 border-blue-600/60 text-white placeholder-blue-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/40'
+                                                : 'bg-blue-50/70 border-blue-300/80 text-blue-950 placeholder-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-400/50'
+                                    }`}
                                     placeholder="you@example.com"
                                 />
-                                <svg className={`absolute left-4 top-3.5 w-5 h-5 transition-colors duration-300 ${focusedField === 'email'
-                                    ? 'text-purple-500'
-                                    : darkMode ? 'text-gray-400' : 'text-gray-400'
-                                    }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                                </svg>
+                                <Mail className={`absolute left-3 sm:left-4 top-2.5 sm:top-3.5 w-4 sm:w-5 h-4 sm:h-5 transition-colors duration-300 ${focusedField === 'email'
+                                    ? role === "admin" ? 'text-red-500' : 'text-blue-500'
+                                    : role === "admin" ? (darkMode ? 'text-red-400' : 'text-red-600') : (darkMode ? 'text-blue-400' : 'text-blue-600')
+                                    }`} />
                             </div>
                         </div>
 
                         {/* Password Field */}
                         <div className="relative group">
-                            <label className={`block text-sm font-semibold mb-2 transition-colors duration-300 ${darkMode ? 'text-gray-200' : 'text-gray-700'
-                                }`}>
+                            <label className={`block text-xs sm:text-sm font-bold mb-2.5 transition-colors duration-300 ${
+                                role === "admin"
+                                    ? darkMode ? 'text-red-300' : 'text-red-600'
+                                    : darkMode ? 'text-blue-300' : 'text-blue-600'
+                            }`}>
                                 Password
                             </label>
                             <div className="relative">
-                                <div className={`absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl blur transition-opacity duration-300 ${focusedField === 'password' ? 'opacity-40' : 'opacity-0'
+                                <div className={`absolute inset-0 rounded-xl blur transition-opacity duration-300 ${role === "admin" 
+                                    ? 'bg-gradient-to-r from-red-500 via-red-600 to-rose-600' 
+                                    : 'bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600'
+                                } ${focusedField === 'password' ? 'opacity-60' : 'opacity-0'
                                     }`}></div>
                                 <input
                                     type={showPassword ? "text" : "password"}
@@ -244,33 +410,42 @@ const Login = () => {
                                     onChange={(e) => setPassword(e.target.value)}
                                     onFocus={() => setFocusedField('password')}
                                     onBlur={() => setFocusedField(null)}
-                                    className={`relative w-full px-4 py-3 pl-12 pr-12 border-2 rounded-xl outline-none transition-all duration-300 transform hover:scale-[1.02] focus:scale-[1.02] ${darkMode
-                                        ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50'
-                                        : 'bg-white border-gray-200 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-purple-500'
-                                        }`}
+                                    className={`relative w-full px-3 sm:px-4 py-2.5 sm:py-3.5 pl-9 sm:pl-12 pr-10 sm:pr-12 border-2 rounded-xl outline-none text-sm font-medium transition-all duration-300 transform hover:scale-[1.02] focus:scale-[1.02] ${
+                                        role === "admin"
+                                            ? darkMode
+                                                ? 'bg-red-950/40 border-red-600/60 text-white placeholder-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-500/40'
+                                                : 'bg-red-50/70 border-red-300/80 text-red-950 placeholder-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-400/50'
+                                            : darkMode
+                                                ? 'bg-blue-950/40 border-blue-600/60 text-white placeholder-blue-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/40'
+                                                : 'bg-blue-50/70 border-blue-300/80 text-blue-950 placeholder-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-400/50'
+                                    }`}
                                     placeholder="••••••••"
                                 />
-                                <svg className={`absolute left-4 top-3.5 w-5 h-5 transition-colors duration-300 ${focusedField === 'password'
-                                    ? 'text-purple-500'
-                                    : darkMode ? 'text-gray-400' : 'text-gray-400'
-                                    }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                </svg>
+                                <Lock className={`absolute left-3 sm:left-4 top-2.5 sm:top-3.5 w-4 sm:w-5 h-4 sm:h-5 transition-colors duration-300 ${focusedField === 'password'
+                                    ? role === "admin" ? 'text-red-500' : 'text-blue-500'
+                                    : role === "admin" ? (darkMode ? 'text-red-400' : 'text-red-600') : (darkMode ? 'text-blue-400' : 'text-blue-600')
+                                    }`} />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className={`absolute right-3 top-3 p-1 rounded-lg transition-all duration-300 hover:scale-110 ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'
-                                        }`}
+                                    className={`absolute right-2 sm:right-3 top-2.5 sm:top-3 p-1 rounded-lg transition-all duration-300 hover:scale-110 ${
+                                        role === "admin"
+                                            ? darkMode ? 'hover:bg-red-900/50' : 'hover:bg-red-100/70'
+                                            : darkMode ? 'hover:bg-blue-900/50' : 'hover:bg-blue-100/70'
+                                    }`}
                                 >
                                     {showPassword ? (
-                                        <svg className={`w-5 h-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                                        </svg>
+                                        <EyeOff className={`w-4 sm:w-5 h-4 sm:h-5 ${
+                                            role === "admin"
+                                                ? darkMode ? 'text-red-300' : 'text-red-600'
+                                                : darkMode ? 'text-blue-300' : 'text-blue-600'
+                                        }`} />
                                     ) : (
-                                        <svg className={`w-5 h-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                        </svg>
+                                        <Eye className={`w-4 sm:w-5 h-4 sm:h-5 ${
+                                            role === "admin"
+                                                ? darkMode ? 'text-red-300' : 'text-red-600'
+                                                : darkMode ? 'text-blue-300' : 'text-blue-600'
+                                        }`} />
                                     )}
                                 </button>
                             </div>
@@ -280,22 +455,28 @@ const Login = () => {
                         <button
                             onClick={handleSubmit}
                             disabled={loading}
-                            className="relative w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3.5 rounded-xl font-bold text-lg shadow-2xl overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed transform transition-all duration-300 hover:scale-[1.02] hover:shadow-purple-500/50 active:scale-95"
+                            className={`relative w-full text-white py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base shadow-lg overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed transform transition-all duration-300 hover:scale-[1.03] active:scale-95 ${
+                                role === "admin"
+                                    ? 'bg-gradient-to-r from-red-600 via-red-500 to-rose-600 hover:shadow-2xl hover:shadow-red-500/50'
+                                    : 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:shadow-2xl hover:shadow-blue-500/50'
+                            }`}
                         >
-                            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-purple-600 to-pink-600 transform translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></span>
+                            <span className={`absolute inset-0 w-full h-full transform translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out ${
+                                role === "admin"
+                                    ? 'bg-gradient-to-r from-rose-600 via-rose-500 to-pink-600'
+                                    : 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600'
+                            }`}></span>
                             <span className="relative flex items-center justify-center gap-2">
                                 {loading ? (
                                     <>
-                                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Authenticating...
+                                        <Loader size={18} className="animate-spin" />
+                                        <span className="hidden sm:inline">Authenticating...</span>
+                                        <span className="sm:hidden">Loading...</span>
                                     </>
                                 ) : (
                                     <>
                                         Login Now
-                                        <svg className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-4 sm:w-5 h-4 sm:h-5 transform group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                         </svg>
                                     </>
@@ -305,29 +486,25 @@ const Login = () => {
                     </div>
 
                     {/* Footer */}
-                    <div className="mt-8 text-center space-y-4">
+                    <div className="mt-6 sm:mt-8 text-center space-y-3 sm:space-y-4">
                         {role === "user" && (
-                            <div className="space-y-3">
-                                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            <div className="space-y-2 sm:space-y-3">
+                                <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                     Don't have an account?
                                 </p>
                                 <button
                                     onClick={() => navigate("/Signup")}
-                                    className={`w-full py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-[1.02] active:scale-95 border-2 ${darkMode
-                                        ? 'border-purple-500 text-purple-400 hover:bg-purple-500/10'
+                                    className={`w-full py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-all duration-300 transform hover:scale-[1.02] active:scale-95 border-2 ${darkMode
+                                        ? 'border-blue-500 text-blue-400 hover:bg-blue-500/10'
                                         : 'border-blue-500 text-blue-600 hover:bg-blue-50'
                                         }`}
                                 >
                                     Create New Account
                                 </button>
-
                             </div>
                         )}
-                        {/* <p className={`text-sm animate-fadeIn animation-delay-400 ${darkMode ? 'text-gray-400' : 'text-gray-600'
-                            }`}>
-                            Demo credentials accepted for testing
-                        </p> */}
-                        <div className="flex items-center justify-center gap-4">
+
+                        <div className="flex items-center justify-center gap-3 sm:gap-4 flex-wrap">
                             <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                                 <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>System Online</span>
